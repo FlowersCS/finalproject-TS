@@ -20,7 +20,7 @@ class MLPModel:
     def predict(self, X):
         return self.model.predict(X)
 
-class LSTMModel:
+class LSTMModel: # revisar arquitectura
     def __init__(self, input_shape, num_classes):
         self.model = Sequential()
         self.model.add(LSTM(128, activation='relu', input_shape=input_shape, return_sequences=True))

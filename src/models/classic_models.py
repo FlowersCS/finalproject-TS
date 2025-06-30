@@ -5,6 +5,8 @@ from sklearn.svm import SVC
 # definir clases para random forest, KNN, SVM para clasificación y ser llamado en models/train_classic.py
 class RandomForestModel:
     def __init__(self, n_estimators=100, random_state=None):
+        self.n_estimators = n_estimators
+        self.random_state = random_state
         self.model = RandomForestClassifier(n_estimators=n_estimators, random_state=random_state)
 
     def fit(self, X, y):
@@ -12,9 +14,14 @@ class RandomForestModel:
 
     def predict(self, X):
         return self.model.predict(X)
+    
+    def get_params(self, deep=True):
+        return {"n_estimators": self.n_estimators,
+                "random_state": self.random_state}
 
 class KNNModel:
     def __init__(self, n_neighbors=6):
+        self.n_neighbors = n_neighbors
         self.model = KNeighborsClassifier(n_neighbors=n_neighbors)
 
     def fit(self, X, y):
@@ -22,9 +29,14 @@ class KNNModel:
 
     def predict(self, X):
         return self.model.predict(X)
+    
+    def get_params(self, deep=True):
+        return {'n_neighbors': self.n_neighbors}
 
 class SVMModel:
     def __init__(self, kernel='linear', C=1.0):
+        self.kernel = kernel
+        self.C = C
         self.model = SVC(kernel=kernel, C=C)
 
     def fit(self, X, y):
@@ -32,4 +44,8 @@ class SVMModel:
 
     def predict(self, X):
         return self.model.predict(X)
+    
+    def get_params(self, deep=True):
+        return {"kernel": self.kernel, "C": self.C}
+
 

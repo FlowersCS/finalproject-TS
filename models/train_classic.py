@@ -1,10 +1,14 @@
 # entrenamiento de random forest, KNN y SVM con el codigo de classic_models.py
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, classification_report
+from sklearn.model_selection import train_test_split, cross_val_score, KFold, cross_validate
+from sklearn.metrics import accuracy_score, classification_report, f1_score, balanced_accuracy_score
 import sys
 import os
 import joblib
 import pandas as pd
+import numpy as np
+import warnings
+from sklearn.exceptions import UndefinedMetricWarning
+warnings.filterwarnings("ignore", category=UndefinedMetricWarning)
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from src.models.classic_models import RandomForestModel, KNNModel, SVMModel
@@ -13,10 +17,10 @@ project_root = os.path.dirname(os.getcwd())
 data_path = os.path.join(project_root,'finalprojectTS', 'data')
 processed_path = data_path + '/processed'
 
-
-
-features_temporal = pd.read_csv(processed_path + '/features_temporales.csv')
-features_espectrales = pd.read_csv(processed_path + '/features_spectral.csv')
+#features_temporal = pd.read_csv(processed_path + '/features_temporales_labelNum.csv')
+#features_espectrales = pd.read_csv(processed_path + '/features_espectrales_labelNum.csv')
+features_temporal = pd.read_csv(processed_path + '/features_temporales_labelNum_overlap50.csv')
+features_espectrales = pd.read_csv(processed_path + '/features_espectrales_labelNum_overlap50.csv')
 # los labels estan en features_temporal en la ultima columna
 X_temp = features_temporal.iloc[:, :-1]  # Todas las columnas excepto la última
 y_temp = features_temporal.iloc[:, -1]   # Solo la última columna
@@ -28,115 +32,75 @@ y_spec = features_espectrales.iloc[:, -1]   # Solo la última columna
 X_temp_train, X_temp_test, y_temp_train, y_temp_test = train_test_split(X_temp, y_temp, test_size=0.2, random_state=42)
 X_spec_train, X_spec_test, y_spec_train, y_spec_test = train_test_split(X_spec, y_spec, test_size=0.2, random_state=42)
 
-# Definir los modelos y sus nombres
-#models = [
-#    ("RandomForest", RandomForestModel(n_estimators=100, random_state=42)),
-#    ("KNN", KNNModel(n_neighbors=6)),
-#    ("SVM", SVMModel(kernel='rbf', C=1.0))
-#]
-#
-## Definir los conjuntos de datos y sus nombres
-#datasets = [
-#    ("Features_Temporales", X_temp_train, X_temp_test, y_temp_train, y_temp_test),
-#    ("Features_Espectrales", X_spec_train, X_spec_test, y_spec_train, y_spec_test)
-#]
-#
-#save_models_path = os.path.join(project_root, 'finalprojectTS', 'models', 'save_models')
-#
-#for model_name, model in models:
-#    for data_name, X_train, X_test, y_train, y_test in datasets:
-#        model.fit(X_train, y_train)
-#        predictions = model.predict(X_test)
-#        print(f"{model_name} Model - {data_name}")
-#        print("Accuracy:", accuracy_score(y_test, predictions))
-#        print(classification_report(y_test, predictions))
-#        # Guardar el modelo
-#        filename = f"{model_name.lower()}_{data_name.lower()}.pkl"
-#        joblib.dump(model, os.path.join(save_models_path, filename))
-#        print("\n" + "="*50 + "\n")
+models = [
+    ("RandomForest", RandomForestModel(n_estimators=100, random_state=42)),
+    ("KNN", KNNModel(n_neighbors=6)),
+    ("SVM", SVMModel(kernel='rbf', C=1.0))
+]
 
+datasets = [
+    ("Features_temporales", X_temp, y_temp),
+    ("Features_espectrales", X_spec, y_temp)
+]
 
-## Entrenamiento y evaluación de Random Forest para features temporales
-#rf_temp_model = RandomForestModel(n_estimators=100, random_state=42)
-#rf_temp_model.fit(X_temp_train, y_temp_train)
-#rf_temp_predictions = rf_temp_model.predict(X_temp_test)
-#
-#print("Random Forest Model - Features Temporales")
-#print("Accuracy:", accuracy_score(y_temp_test, rf_temp_predictions))
-#print(classification_report(y_temp_test, rf_temp_predictions))
-#
-## guardar el modelo de Random Forest para features temporales
-#save_models_path = os.path.join(project_root, 'finalprojectTS', 'models', 'save_models')
-#joblib.dump(rf_temp_model, os.path.join(save_models_path, 'rf_temp_model.pkl'))
-#
-#
-#print("\n" + "="*50 + "\n")
-#
-## Entrenamiento y evaluación de Random Forest para features espectrales
-#rf_spec_model = RandomForestModel(n_estimators=100, random_state=42)
-#rf_spec_model.fit(X_spec_train, y_spec_train)
-#rf_spec_predictions = rf_spec_model.predict(X_spec_test)
-#
-#print("Random Forest Model - Features Espectrales")
-#print("Accuracy:", accuracy_score(y_spec_test, rf_spec_predictions))
-#print(classification_report(y_spec_test, rf_spec_predictions))
-#
-## guardar el modelo de Random Forest para features espectrales
-#joblib.dump(rf_spec_model, os.path.join(save_models_path, 'rf_spec_model.pkl'))
-
-
-## Entrenamiento y evaluación de KNN para features temporales
-#knn_temp_model = KNNModel(n_neighbors=6)
-#knn_temp_model.fit(X_temp_train, y_temp_train)
-#knn_temp_predictions = knn_temp_model.predict(X_temp_test)
-#
-#print("KNN Model - Features Temporales")
-#print("Accuracy:", accuracy_score(y_temp_test, knn_temp_predictions))
-#print(classification_report(y_temp_test, knn_temp_predictions))
-#
-## guardar el modelo de KNN para features temporales
-#save_models_path = os.path.join(project_root, 'finalprojectTS', 'models', 'save_models')
-#joblib.dump(knn_temp_model, os.path.join(save_models_path, 'knn_temp_model.pkl'))
-#
-#print("\n" + "="*50 + "\n")
-#
-## Entrenamiento y evaluación de KNN para features espectrales
-#knn_spec_model = KNNModel(n_neighbors=6)
-#knn_spec_model.fit(X_spec_train, y_spec_train)
-#knn_spec_predictions = knn_spec_model.predict(X_spec_test)
-#
-#print("KNN Model - Features Espectrales")
-#print("Accuracy:", accuracy_score(y_spec_test, knn_spec_predictions))
-#print(classification_report(y_spec_test, knn_spec_predictions))
-#
-## guardar el modelo de KNN para features espectrales
-#joblib.dump(knn_spec_model, os.path.join(save_models_path, 'knn_spec_model.pkl'))
-
-
-# PROBLEMA SVM, DESBALANCE DE CLASES
-# Entrenamiento y evaluación de SVM para features temporales
-svm_temp_model = SVMModel(kernel='rbf', C=1.0)
-svm_temp_model.fit(X_temp_train, y_temp_train)
-svm_temp_predictions = svm_temp_model.predict(X_temp_test)
-
-print("SVM Model - Features Temporales")
-print("Accuracy:", accuracy_score(y_temp_test, svm_temp_predictions))
-print(classification_report(y_temp_test, svm_temp_predictions))
-
-# guardar el modelo de SVM para features temporales
 save_models_path = os.path.join(project_root, 'finalprojectTS', 'models', 'save_models')
-joblib.dump(svm_temp_model, os.path.join(save_models_path, 'svm_temp_model.pkl'))
+save_results_path = os.path.join(project_root, 'finalprojectTS', 'models', 'results')
+os.makedirs(save_models_path, exist_ok=True)
 
-print("\n" + "="*50 + "\n")
+# Separación de kfold y training con testing
+def crossval_models(models, X, y, n_splits=7):
+    results = []
+    for model_name, model in models:
+        kf = KFold(n_splits=n_splits, shuffle=True, random_state=42)
+        scoring = ['f1_weighted', 'balanced_accuracy']
+        cv_results = cross_validate(model, X, y, cv=kf, scoring=scoring)
+        results.append({
+            'Modelo': model_name,
+            'F1-score': np.mean(cv_results['test_f1_weighted']),
+            'Balanced accuracy': np.mean(cv_results['test_balanced_accuracy'])
+        })
+    return pd.DataFrame(results)
 
-# Entrenamiento y evaluación de SVM para features espectrales
-svm_spec_model = SVMModel(kernel='rbf', C=1.0)
-svm_spec_model.fit(X_spec_train, y_spec_train)
-svm_spec_predictions = svm_spec_model.predict(X_spec_test)
+cross_validation_temp = crossval_models(models, X_temp_train, y_temp_train)
+cross_validation_spec = crossval_models(models, X_spec_train, y_spec_train)
 
-print("SVM Model - Features Espectrales")
-print("Accuracy:", accuracy_score(y_spec_test, svm_spec_predictions))
-print(classification_report(y_spec_test, svm_spec_predictions))
+print("Resultados validación cruzada - Features Temporales")
+print(cross_validation_temp)
+print("\nResultados validación cruzada - Features Espectrales")
+print(cross_validation_spec)
 
-# guardar el modelo de SVM para features espectrales
-joblib.dump(svm_spec_model, os.path.join(save_models_path, 'svm_spec_model.pkl'))
+def train_and_test_model(model, X_train, y_train, X_test, y_test, model_name, dataset_name):
+    model.fit(X_train, y_train)
+    preds = model.predict(X_test)
+    filename = f"{model_name.lower()}_{dataset_name.lower()}.pkl"
+    joblib.dump(model, os.path.join(save_models_path, filename))
+    return {
+        'F1-score': f1_score(y_test, preds, average='weighted'),
+        'Balanced accuracy': balanced_accuracy_score(y_test, preds),
+        'Accuracy': accuracy_score(y_test, preds),
+        'Classification report': classification_report(y_test, preds),
+        'Archivo': filename
+    }
+    
+test_results_temp = []
+test_results_spec = []
+    
+for model_name, model in models:
+    if model_name in ['RandomForest', 'KNN', 'SVM']:
+        # Temporales
+        res_temp = train_and_test_model(model, X_temp_train, y_temp_train, X_temp_test, y_temp_test, model_name, "features_temporales")
+        test_results_temp.append({'Modelo': model_name, **{k: v for k, v in res_temp.items() if k != 'Classification report'}})
+        print(f"{model_name} - Test Results (Temporales):", res_temp)
+        # Espectrales
+        res_spec = train_and_test_model(model, X_spec_train, y_spec_train, X_spec_test, y_spec_test, model_name, "features_espectrales")
+        test_results_spec.append({'Modelo': model_name, **{k: v for k, v in res_spec.items() if k != 'Classification report'}})
+        print(f"{model_name} - Test Results (Espectrales):", res_spec)
+
+df_test_temp = pd.DataFrame(test_results_temp)
+df_test_spec = pd.DataFrame(test_results_spec)
+
+df_test_temp.to_csv(os.path.join(save_results_path, 'resultados_test_temporales.csv'), index=False)
+df_test_spec.to_csv(os.path.join(save_results_path, 'resultados_test_espectrales.csv'), index=False)
+
+cross_validation_temp.to_csv(os.path.join(save_results_path, 'resultados_cv_temporales.csv'), index=False)
+cross_validation_spec.to_csv(os.path.join(save_results_path, 'resultados_cv_espectrales.csv'), index=False)

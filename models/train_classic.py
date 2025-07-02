@@ -90,11 +90,11 @@ for model_name, model in models:
         # Temporales
         res_temp = train_and_test_model(model, X_temp_train, y_temp_train, X_temp_test, y_temp_test, model_name, "features_temporales")
         test_results_temp.append({'Modelo': model_name, **{k: v for k, v in res_temp.items() if k != 'Classification report'}})
-        print(f"{model_name} - Test Results (Temporales):", res_temp)
+        #print(f"{model_name} - Test Results (Temporales):", res_temp)
         # Espectrales
         res_spec = train_and_test_model(model, X_spec_train, y_spec_train, X_spec_test, y_spec_test, model_name, "features_espectrales")
         test_results_spec.append({'Modelo': model_name, **{k: v for k, v in res_spec.items() if k != 'Classification report'}})
-        print(f"{model_name} - Test Results (Espectrales):", res_spec)
+        #print(f"{model_name} - Test Results (Espectrales):", res_spec)
 
 df_test_temp = pd.DataFrame(test_results_temp)
 df_test_spec = pd.DataFrame(test_results_spec)

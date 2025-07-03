@@ -46,7 +46,7 @@ models = [
 
 datasets = [
     ("Features_temporales", X_temp, y_temp),
-    ("Features_espectrales", X_spec, y_temp)
+    ("Features_espectrales", X_spec, y_spec)
 ]
 
 save_models_path = os.path.join(project_root, 'finalprojectTS', 'models', 'save_models')

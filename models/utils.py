@@ -5,6 +5,25 @@ from torch.utils.data import DataLoader, TensorDataset
 from sklearn.model_selection import StratifiedKFold
 from sklearn.metrics import f1_score, balanced_accuracy_score
 import numpy as np
+import pandas as pd
+from sklearn.model_selection import KFold, cross_validate
+
+# TRADITIONAL MODELS UTILS
+def kfold_trad_models(models, X, y, n_splits=7):
+    results = []
+    for model_name, model in models:
+        kf = KFold(n_splits=n_splits, shuffle=True, random_state=42)
+        scoring = ['f1_weighted', 'balanced_accuracy', 'accuracy']
+        cv_results = cross_validate(model, X, y, cv=kf, scoring=scoring)
+        results.append({
+            'Modelo': model_name,
+            'F1-score': np.mean(cv_results['test_f1_weighted']),
+            'Balanced accuracy': np.mean(cv_results['test_balanced_accuracy']),
+            'Accuracy': np.mean(cv_results['test_accuracy'])
+        })
+    return pd.DataFrame(results)
+
+# DEEP MODELS UTILS
 
 def train_one_epoch(model, dataloader, criterion, optimizer, device, epoch=None):
     model.train()

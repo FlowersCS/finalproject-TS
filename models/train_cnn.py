@@ -61,7 +61,7 @@ y_spec_train_np = y_spec_train.to_numpy()
 y_spec_test_np  = y_spec_test.to_numpy()
 
 print("KFold en train CNN temporales")
-f1_scores_temp, bal_acc_temp = kfold(
+f1_scores_temp, bal_acc_temp, acc_temp = kfold(
     X_temp_train_np, y_temp_train_np,
     model_class=CNNModel,
     model_kwargs={
@@ -76,7 +76,7 @@ f1_scores_temp, bal_acc_temp = kfold(
 )
 
 print("KFold en train CNN espectrales")
-f1_scores_spec, bal_acc_spec = kfold(
+f1_scores_spec, bal_acc_spec, acc_spec = kfold(
     X_spec_train_np, y_spec_train_np,
     model_class=CNNModel,
     model_kwargs={
@@ -98,6 +98,7 @@ df_temp = pd.concat([df_cvTemp, pd.DataFrame([{
     "Modelo": "CNN",
     "F1-score": np.mean(f1_scores_temp),
     "Balanced accuracy": np.mean(bal_acc_temp),
+    "Accuracy": np.mean(acc_temp)
 }])], ignore_index=True)
 
 df_temp.to_csv(csv_path_cvTemp, index=False)
@@ -110,6 +111,7 @@ df_spec = pd.concat([df_cvSpec, pd.DataFrame([{
     "Modelo": "CNN",
     "F1-score": np.mean(f1_scores_spec),
     "Balanced accuracy": np.mean(bal_acc_spec),
+    "Accuracy": np.mean(acc_spec)
 }])], ignore_index=True)
 
 df_spec.to_csv(csv_path_cvSpec, index=False)

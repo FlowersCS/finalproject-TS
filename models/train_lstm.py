@@ -62,7 +62,7 @@ y_spec_test_np  = y_spec_test.to_numpy()
 
 
 print("KFold en train LSTM temporales")
-f1_scores_temp, bal_acc_temp = kfold(
+f1_scores_temp, bal_acc_temp, acc_temp = kfold(
     X_temp_train_np, y_temp_train_np,
     model_class=LSTMModel,
     model_kwargs={'input_size': X_temp_train.shape[1], 'num_classes': len(np.unique(y_temp_train))},
@@ -73,7 +73,7 @@ f1_scores_temp, bal_acc_temp = kfold(
 )
 
 print("KFold en train LSTM espectrales")
-f1_scores_spec, bal_acc_spec = kfold(
+f1_scores_spec, bal_acc_spec, acc_spec = kfold(
     X_spec_train_np, y_spec_train_np,
     model_class=LSTMModel,
     model_kwargs={'input_size': X_spec_train.shape[1], 'num_classes': len(np.unique(y_spec_train))},
@@ -91,6 +91,7 @@ df_temp = pd.concat([df_cvTemp, pd.DataFrame([{
     "Modelo": "LSTM",
     "F1-score": np.mean(f1_scores_temp),
     "Balanced accuracy": np.mean(bal_acc_temp),
+    "Accuracy": np.mean(acc_temp)
 }])], ignore_index=True)
 
 df_temp.to_csv(csv_path_cvTemp, index=False)
@@ -103,6 +104,7 @@ df_spec = pd.concat([df_cvSpec, pd.DataFrame([{
     "Modelo": "LSTM",
     "F1-score": np.mean(f1_scores_spec),
     "Balanced accuracy": np.mean(bal_acc_spec),
+    "Accuracy": np.mean(acc_spec)
 }])], ignore_index=True)
 
 df_spec.to_csv(csv_path_cvSpec, index=False)

@@ -10,6 +10,11 @@ import warnings
 from sklearn.exceptions import UndefinedMetricWarning
 warnings.filterwarnings("ignore", category=UndefinedMetricWarning)
 
+import wandb
+wandb.init(project="Final-Project-TimeSeries-UTEC", name="Classic-Models", config={
+    "n_splits": 7
+})
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from src.models.classic_models import RandomForestModel, KNNModel, SVMModel
 
@@ -87,7 +92,7 @@ test_results_temp = []
 test_results_spec = []
     
 for model_name, model in models:
-    if model_name in ['RandomForest', 'KNN', 'SVM']:
+    if model_name in ['RandomForest', 'KNN','SVM']:  
         # Temporales
         res_temp = train_and_test_model(model, X_temp_train, y_temp_train, X_temp_test, y_temp_test, model_name, "features_temporales")
         test_results_temp.append({'Modelo': model_name, **{k: v for k, v in res_temp.items() if k != 'Classification report'}})
@@ -105,3 +110,42 @@ df_test_spec.to_csv(os.path.join(save_results_path, 'resultados_test_espectrales
 
 cross_validation_temp.to_csv(os.path.join(save_results_path, 'resultados_cv_temporales.csv'), index=False)
 cross_validation_spec.to_csv(os.path.join(save_results_path, 'resultados_cv_espectrales.csv'), index=False)
+
+
+# Log de KFold (después de crossval_models)
+for idx, row in cross_validation_temp.iterrows():
+    wandb.log({
+        "model": row["Modelo"] + "_temp",
+        "cv_f1": row["F1-score"],
+        "cv_balanced_accuracy": row["Balanced accuracy"],
+        "cv_accuracy": row["Accuracy"],
+        "dataset": "temporales"
+    })
+
+for idx, row in cross_validation_spec.iterrows():
+    wandb.log({
+        "model": row["Modelo"] + "_spec",
+        "cv_f1": row["F1-score"],
+        "cv_balanced_accuracy": row["Balanced accuracy"],
+        "cv_accuracy": row["Accuracy"],
+        "dataset": "espectrales"
+    })
+
+# Log de test (después de test_results_temp y test_results_spec)
+for idx, row in df_test_temp.iterrows():
+    wandb.log({
+        "model": row["Modelo"] + "_temp",
+        "test_f1": row["F1-score"],
+        "test_balanced_accuracy": row["Balanced accuracy"],
+        "test_accuracy": row["Accuracy"],
+        "dataset": "temporales"
+    })
+
+for idx, row in df_test_spec.iterrows():
+    wandb.log({
+        "model": row["Modelo"] + "_spec",
+        "test_f1": row["F1-score"],
+        "test_balanced_accuracy": row["Balanced accuracy"],
+        "test_accuracy": row["Accuracy"],
+        "dataset": "espectrales"
+    })

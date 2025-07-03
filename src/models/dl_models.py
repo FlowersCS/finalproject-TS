@@ -1,59 +1,145 @@
-# definir arquitecturas de MLP, LSTM y CNN temporal para clasificacion
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
 
-from keras.models import Sequential
-from keras.layers import Dense, LSTM, Conv1D, MaxPooling1D, Flatten, Dropout, Input
-from keras.optimizers import Adam
+class MLPModel(nn.Module):
+    def __init__(self, input_size=354, num_classes=6):
+        super(MLPModel, self).__init__()
+        # Hidden layers with dropout decrecientes
+        self.fc1 = nn.Linear(input_size, 256)
+        self.bn1 = nn.BatchNorm1d(256)
+        self.dropout1 = nn.Dropout(0.4)
+        
+        self.fc2 = nn.Linear(256, 128)
+        self.bn2 = nn.BatchNorm1d(128)
+        self.dropout2 = nn.Dropout(0.35)
+        
+        self.fc3 = nn.Linear(128, 64)
+        self.bn3 = nn.BatchNorm1d(64)
+        self.dropout3 = nn.Dropout(0.3)
+        
+        # Output layer
+        self.output = nn.Linear(64, num_classes)
+        
+        # weights init
+        self._initialize_weights()
+        
 
-class MLPModel:
-    def __init__(self, input_shape, num_classes):
-        self.model = Sequential()
-        self.model.add(Input(shape=input_shape))
-        self.model.add(Dense(128, activation='relu'))
-        self.model.add(Dropout(0.5))
-        self.model.add(Dense(64, activation='relu'))
-        self.model.add(Dropout(0.5))
-        self.model.add(Dense(num_classes, activation='softmax'))
-        self.model.compile(optimizer=Adam(), loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+    def forward(self, x):
+        # negative_slope ayuda a mantener el flujo de gradientes
+        x = F.selu(self.fc1(x)) 
+        x = self.bn1(x)
+        x = self.dropout1(x)
+        
+        x = F.selu(self.fc2(x))
+        x = self.bn2(x)
+        x = self.dropout2(x)
+        
+        x = F.selu(self.fc3(x))
+        x = self.bn3(x)
+        x = self.dropout3(x)
+        
+        return self.output(x)
     
-    def fit(self, X, y, epochs=10, batch_size=32, **kwargs):
-        self.model.fit(X, y, epochs=epochs, batch_size=batch_size, **kwargs)
+    def _initialize_weights(self):
+        for m in self.modules():
+            if isinstance(m, nn.Linear):
+                nn.init.orthogonal_(m.weight, gain=1.0)  # Inicialización ortogonal
+                if m.bias is not None:
+                    nn.init.constant_(m.bias, 0.01)  # Pequeño bias inicial
     
-    def predict(self, X):
-        return self.model.predict(X)
+class LSTMModel(nn.Module):
+    def __init__(self, input_size=354, num_classes=6, hidden_size=128, num_layers=2):
+        super(LSTMModel, self).__init__()
+        
+        # Capa LSTM
+        self.lstm = nn.LSTM(
+            input_size=input_size,
+            hidden_size=hidden_size,
+            num_layers=num_layers,
+            batch_first=True,  # Para que la entrada sea (batch, seq, feature)
+            dropout=0.3 if num_classes > 1 else 0,  # Dropout entre capas LSTM
+            #bidirectional=True  # Bidireccional para capturar mejor la temporalidad
+        )
+        
+        # Capas de atencion
+        self.attention = nn.Sequential(
+            nn.Linear(hidden_size, hidden_size),
+            nn.Tanh(),
+            nn.Linear(hidden_size, 1),
+            nn.Softmax(dim=1)
+        )
+        
+        # Capas fully connected
+        self.fc1 = nn.Linear(hidden_size, 64)
+        self.bn1 = nn.BatchNorm1d(64)
+        self.dropout = nn.Dropout(0.4)
+        
+        self.fc2 = nn.Linear(64, num_classes)
+        
+    def forward(self, x):
+        # x debe tener forma (batch_size, seq_length, input_size)
+        lstm_out, (h_n, c_n) = self.lstm(x)
+        
+        # Aplicar atención
+        attn_weights = self.attention(lstm_out)
+        attn_weights = attn_weights.squeeze(2) 
+        attn_weights = F.softmax(attn_weights, dim=1)  # Normalizar pesos de atención
+        attn_output = torch.bmm(attn_weights.unsqueeze(1), lstm_out).squeeze(1)  # (batch_size, hidden_size)
+        
+        # Capas fully connected
+        x = F.relu(self.fc1(attn_output))
+        x = self.bn1(x)
+        x = self.dropout(x)
+        
+        x = self.fc2(x)
+        
+        return x
+        
 
-class LSTMModel: # revisar arquitectura
-    def __init__(self, input_shape, num_classes):
-        self.model = Sequential()
-        self.model.add(Input(shape=input_shape))
-        self.model.add(LSTM(128, activation='relu', return_sequences=True))
-        self.model.add(Dropout(0.5))
-        self.model.add(LSTM(64, activation='relu'))
-        self.model.add(Dropout(0.5))
-        self.model.add(Dense(num_classes, activation='softmax'))
-        self.model.compile(optimizer=Adam(), loss='sparse_categorical_crossentropy', metrics=['accuracy'])
-    
-    def fit(self, X, y, epochs=10, batch_size=32, **kwargs):
-        self.model.fit(X, y, epochs=epochs, batch_size=batch_size, **kwargs)
-    
-    def predict(self, X):
-        return self.model.predict(X)
 
-class CNNModel:
-    def __init__(self, input_shape, num_classes):
-        self.model = Sequential()
-        self.model.add(Input(shape=input_shape))
-        self.model.add(Conv1D(filters=64, kernel_size=3, activation='relu'))
-        self.model.add(MaxPooling1D(pool_size=2))
-        self.model.add(Conv1D(filters=128, kernel_size=3, activation='relu'))
-        self.model.add(MaxPooling1D(pool_size=2))
-        self.model.add(Flatten())
-        self.model.add(Dense(128, activation='relu'))
-        self.model.add(Dropout(0.5))
-        self.model.add(Dense(num_classes, activation='softmax'))
-        self.model.compile(optimizer=Adam(), loss='sparse_categorical_crossentropy', metrics=['accuracy'])
-    
-    def fit(self, X, y, epochs=10, batch_size=32, **kwargs):
-        self.model.fit(X, y, epochs=epochs, batch_size=batch_size, **kwargs)
-    
-    def predict(self, X):
-        return self.model.predict(X)
+class CNNModel(nn.Module):
+    def __init__(self, input_channels=1, num_classes=6, input_features=354):
+        super(CNNModel, self).__init__()
+        self.conv1 = nn.Sequential(
+            nn.Conv1d(input_channels, 64, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm1d(64),
+            nn.ReLU(),
+            nn.MaxPool1d(kernel_size=2, stride=2)
+        )
+        self.conv2 = nn.Sequential(
+            nn.Conv1d(64, 128, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm1d(128),
+            nn.ReLU(),
+            nn.MaxPool1d(kernel_size=2, stride=2)
+        )
+        self.conv3 = nn.Sequential(
+            nn.Conv1d(128, 256, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm1d(256),
+            nn.ReLU(),
+            nn.MaxPool1d(kernel_size=2, stride=2)
+        )
+        # Calcula el tamaño de entrada a fc1 automáticamente
+        with torch.no_grad():
+            dummy = torch.zeros(1, input_channels, input_features)
+            dummy = self.conv1(dummy)
+            dummy = self.conv2(dummy)
+            dummy = self.conv3(dummy)
+            self._to_linear = dummy.view(1, -1).shape[1]
+        self.fc1 = nn.Linear(self._to_linear, 512)
+        self.dropout = nn.Dropout(0.5)
+        self.fc2 = nn.Linear(512, num_classes)
+
+    def forward(self, x):
+        if x.dim() == 2:
+            x = x.unsqueeze(1)
+        elif x.dim() == 3 and x.size(1) != 1:
+            x = x.permute(0, 2, 1)
+        x = self.conv1(x)
+        x = self.conv2(x)
+        x = self.conv3(x)
+        x = x.view(x.size(0), -1)
+        x = F.relu(self.fc1(x))
+        x = self.dropout(x)
+        x = self.fc2(x)
+        return x

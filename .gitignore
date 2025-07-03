@@ -91,3 +91,6 @@ venv/
 
 #notas
 *notas.txt
+
+# wandb
+wandb/

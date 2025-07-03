@@ -94,5 +94,3 @@ venv/
 
 # wandb
 wandb/
-
-models/test_svm.py

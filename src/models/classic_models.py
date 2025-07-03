@@ -34,11 +34,10 @@ class KNNModel:
         return {'n_neighbors': self.n_neighbors}
 
 class SVMModel:
-    def __init__(self, kernel='linear', C=1.0, gamma='scale'):
+    def __init__(self, kernel='linear', C=1.0):
         self.kernel = kernel
         self.C = C
-        self.gamma = gamma
-        self.model = SVC(kernel=kernel, C=C, gamma=gamma)
+        self.model = SVC(kernel=kernel, C=C)
 
     def fit(self, X, y):
         self.model.fit(X, y)
@@ -47,6 +46,6 @@ class SVMModel:
         return self.model.predict(X)
     
     def get_params(self, deep=True):
-        return {"kernel": self.kernel, "C": self.C, "gamma": self.gamma}
+        return {"kernel": self.kernel, "C": self.C}
 
 

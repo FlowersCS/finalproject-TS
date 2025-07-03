@@ -42,11 +42,6 @@ models = [
     ("RandomForest", RandomForestModel(n_estimators=100, random_state=42)),
 ]
 
-datasets = [
-    ("Features_temporales", X_temp, y_temp),
-    ("Features_espectrales", X_spec, y_spec)
-]
-
 save_models_path = os.path.join(project_root, 'finalprojectTS', 'models', 'save_models')
 save_results_path = os.path.join(project_root, 'finalprojectTS', 'models', 'results')
 os.makedirs(save_models_path, exist_ok=True)

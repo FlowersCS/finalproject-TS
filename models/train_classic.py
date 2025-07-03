@@ -52,12 +52,13 @@ def crossval_models(models, X, y, n_splits=7):
     results = []
     for model_name, model in models:
         kf = KFold(n_splits=n_splits, shuffle=True, random_state=42)
-        scoring = ['f1_weighted', 'balanced_accuracy']
+        scoring = ['f1_weighted', 'balanced_accuracy', 'accuracy']
         cv_results = cross_validate(model, X, y, cv=kf, scoring=scoring)
         results.append({
             'Modelo': model_name,
             'F1-score': np.mean(cv_results['test_f1_weighted']),
-            'Balanced accuracy': np.mean(cv_results['test_balanced_accuracy'])
+            'Balanced accuracy': np.mean(cv_results['test_balanced_accuracy']),
+            'Accuracy': np.mean(cv_results['test_accuracy'])
         })
     return pd.DataFrame(results)
 

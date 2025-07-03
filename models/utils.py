@@ -35,7 +35,7 @@ def evaluate(model, dataloader, device):
             all_labels.extend(y_batch.numpy())
     return np.array(all_preds), np.array(all_labels)
 
-def kfold(X, y, model_class, model_kwargs, epochs=10, batch_size=128, n_splits=5, device='cpu'):
+def kfold(X, y, model_class, model_kwargs, epochs=10, batch_size=128, n_splits=7, device='cpu'):
     skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=42)
     f1_scores = []
     bal_acc_scores = []

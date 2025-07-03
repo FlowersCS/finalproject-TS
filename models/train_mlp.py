@@ -58,7 +58,7 @@ f1_scores_temp, bal_acc_temp = kfold(
     model_kwargs={'input_size': X_temp_train.shape[1], 'num_classes': 6},
     epochs=5,
     batch_size=128,
-    n_splits=5,
+    n_splits=7,
     device=device
 )
 
@@ -69,7 +69,7 @@ f1_scores_spec, bal_acc_spec = kfold(
     model_kwargs={'input_size': X_spec_train.shape[1], 'num_classes': 6},
     epochs=5,
     batch_size=128,
-    n_splits=5,
+    n_splits=7,
     device=device
 )
 

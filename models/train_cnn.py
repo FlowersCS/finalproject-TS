@@ -71,7 +71,7 @@ f1_scores_temp, bal_acc_temp = kfold(
     },
     epochs=epochs,
     batch_size=batch_size,
-    n_splits=5,
+    n_splits=7,
     device=device
 )
 
@@ -86,7 +86,7 @@ f1_scores_spec, bal_acc_spec = kfold(
     },
     epochs=epochs,
     batch_size=batch_size,
-    n_splits=5,
+    n_splits=7,
     device=device
 )
 

@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 from sklearn.model_selection import StratifiedKFold
-from sklearn.metrics import f1_score, balanced_accuracy_score
+from sklearn.metrics import f1_score, balanced_accuracy_score, accuracy_score
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import KFold, cross_validate
@@ -58,6 +58,7 @@ def kfold(X, y, model_class, model_kwargs, epochs=10, batch_size=128, n_splits=7
     skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=42)
     f1_scores = []
     bal_acc_scores = []
+    accuracy_scores = []
     for fold, (train_idx, val_idx) in enumerate(skf.split(X, y)):
         print(f"\nFold {fold+1}/{n_splits}")
         model = model_class(**model_kwargs).to(device)
@@ -72,12 +73,15 @@ def kfold(X, y, model_class, model_kwargs, epochs=10, batch_size=128, n_splits=7
         preds, labels = evaluate(model, val_loader, device)
         f1 = f1_score(labels, preds, average='weighted')
         bal_acc = balanced_accuracy_score(labels, preds)
-        print(f"F1-score: {f1:.4f} | Balanced accuracy: {bal_acc:.4f}")
-        wandb.log({f"fold{fold+1}_f1": f1, f"fold{fold+1}_bal_acc": bal_acc})
+        acc = accuracy_score(labels, preds)
+        print(f"F1-score: {f1:.4f} | Balanced accuracy: {bal_acc:.4f} | Accuracy: {acc:.4f}")
+        wandb.log({f"fold{fold+1}_f1": f1, f"fold{fold+1}_bal_acc": bal_acc, f"fold{fold+1}_acc": acc})
         f1_scores.append(f1)
         bal_acc_scores.append(bal_acc)
+        accuracy_scores.append(acc)
     print("\nResumen KFold:")
     print(f"F1-score promedio: {np.mean(f1_scores):.4f}")
     print(f"Balanced accuracy promedio: {np.mean(bal_acc_scores):.4f}")
-    wandb.log({"kfold_f1_mean": np.mean(f1_scores), "kfold_bal_acc_mean": np.mean(bal_acc_scores)})
-    return f1_scores, bal_acc_scores
+    print(f"Accuracy promedio: {np.mean(accuracy_scores):.4f}")
+    wandb.log({"kfold_f1_mean": np.mean(f1_scores), "kfold_bal_acc_mean": np.mean(bal_acc_scores), "kfold_acc_mean": np.mean(accuracy_scores)})
+    return f1_scores, bal_acc_scores, accuracy_scores

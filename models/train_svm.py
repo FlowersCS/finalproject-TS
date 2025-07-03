@@ -39,7 +39,9 @@ X_temp_train, X_temp_test, y_temp_train, y_temp_test = train_test_split(X_temp, 
 X_spec_train, X_spec_test, y_spec_train, y_spec_test = train_test_split(X_spec, y_spec, test_size=0.2, random_state=42)
 
 models = [
-    ("SVM", SVMModel(kernel='rbf', C=1.0))
+    ("SVM-rbf-1-scale", SVMModel(kernel='rbf', C=1.0, gamma='scale')),
+    ("SVM-linear-1-scale", SVMModel(kernel='linear', C=1.0, gamma='scale')),
+    ("SVM-poly-1-scale", SVMModel(kernel='poly', C=1.0, gamma='scale'))
 ]
 
 datasets = [

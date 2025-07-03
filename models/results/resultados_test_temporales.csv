@@ -1,4 +1,0 @@
-Modelo,F1-score,Balanced accuracy,Accuracy,Archivo
-RandomForest,0.9688984622840799,0.9500087737882611,0.9694055944055944,randomforest_features_temporales.pkl
-KNN,0.9856326202027832,0.9681983343403292,0.9857226107226107,knn_features_temporales.pkl
-SVM,0.21117133972921445,0.16666666666666666,0.381993006993007,svm_features_temporales.pkl

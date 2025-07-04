@@ -27,10 +27,10 @@ processed_path = data_path + '/processed'
 features_temporal = pd.read_csv(processed_path + '/features_temporales_labelNum_overlap50.csv')
 features_espectrales = pd.read_csv(processed_path + '/features_espectrales_labelNum_overlap50.csv')
 # los labels estan en features_temporal en la ultima columna
-X_temp = features_temporal.iloc[:, :-1]  # Todas las columnas excepto la última
+X_temp = features_temporal.iloc[:, 1:-1]  # Todas las columnas excepto la última
 y_temp = features_temporal.iloc[:, -1]   # Solo la última columna
 
-X_spec = features_espectrales.iloc[:, :-1]  # Todas las columnas excepto la última
+X_spec = features_espectrales.iloc[:, 1:-1]  # Todas las columnas excepto la última
 y_spec = features_espectrales.iloc[:, -1]   # Solo la última columna
 
 # Dividir el dataset en entrenamiento y prueba

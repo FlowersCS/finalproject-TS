@@ -12,12 +12,10 @@ warnings.filterwarnings("ignore", category=UndefinedMetricWarning)
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from models.utils import kfold_trad_models
 from src.models.dl_models import CNNModel
-from models.utils import kfold_cnn, train_and_test_cnn#,log_results_to_wandb
+from models.utils import kfold_cnn, train_and_test_cnn,setup_wandb,log_results_to_wandb
 from copy import deepcopy
-#import wandb
-#wandb.init(project="Final-Project-TimeSeries-UTEC", name="CNN-temp-spec", config={
-#    "n_splits": 7
-#})
+import wandb
+setup_wandb(project_name="Final-Project-TimeSeries-UTEC", model_type="deep", name="CNN-temp-spec")
 
 project_root = os.path.dirname(os.getcwd())
 data_path = os.path.join(project_root,'finalprojectTS', 'data')
@@ -87,6 +85,8 @@ if os.path.isfile(csv_cv_spec):
     df_spec_kfold = pd.concat([df_cv_spec_old, df_kfold_spec], ignore_index=True)
 df_spec_kfold.to_csv(csv_cv_spec, index=False)
 
+log_results_to_wandb(df_kfold_temp, "temporales", "validación_cruzada")
+log_results_to_wandb(df_kfold_spec, "espectrales", "validación_cruzada")
 
 #---------------Training-test-------------------
 
@@ -120,20 +120,9 @@ print(dict_test_results_spec)
 
 
 csv_test_temp = os.path.join(save_results_path, "resultados_test_temporales.csv")
+csv_test_spec = os.path.join(save_results_path, "resultados_test_espectrales.csv")
 
-# Crear DataFrame con los resultados del CNN
-CNN_test_results_temp = {
-    "Modelo": "CNN",
-    "F1-score": dict_test_results_temp["F1-score"],
-    "Balanced accuracy": dict_test_results_temp["Balanced accuracy"],
-    "Accuracy": dict_test_results_temp["Accuracy"],
-    "ROC-AUC": dict_test_results_temp["ROC-AUC"],
-    "Tiempo entrenamiento (s)": dict_test_results_temp["Tiempo entrenamiento (s)"],
-    "Tiempo predicción (s)": dict_test_results_temp["Tiempo predicción (s)"],
-    "Tiempo total (s)": dict_test_results_temp["Tiempo total (s)"],
-    "Archivo": dict_test_results_temp["Archivo"]
-}
-
+df_test_cnn_temp = pd.DataFrame([dict_test_results_temp])
 # Leer archivo existente o crear nuevo DataFrame
 if os.path.isfile(csv_test_temp):
     df_test_temp = pd.read_csv(csv_test_temp)
@@ -143,25 +132,14 @@ else:
     df_test_temp = pd.DataFrame()
 
 # Concatenar los nuevos resultados
-df_test_temp = pd.concat([df_test_temp, pd.DataFrame([CNN_test_results_temp])], ignore_index=True)
+df_test_temp = pd.concat([df_test_temp, df_test_cnn_temp], ignore_index=True)
 
 # Guardar el archivo actualizado
 df_test_temp.to_csv(csv_test_temp, index=False)
+log_results_to_wandb(df_test_cnn_temp, "temporales", "evaluación_test")
 
-csv_test_spec = os.path.join(save_results_path, "resultados_test_espectrales.csv")
-# Crear DataFrame con los resultados del CNN
-CNN_test_results_spec = {
-    "Modelo": "CNN",
-    "F1-score": dict_test_results_spec["F1-score"],
-    "Balanced accuracy": dict_test_results_spec["Balanced accuracy"],
-    "Accuracy": dict_test_results_spec["Accuracy"],
-    "ROC-AUC": dict_test_results_spec["ROC-AUC"],
-    "Tiempo entrenamiento (s)": dict_test_results_spec["Tiempo entrenamiento (s)"],
-    "Tiempo predicción (s)": dict_test_results_spec["Tiempo predicción (s)"],
-    "Tiempo total (s)": dict_test_results_spec["Tiempo total (s)"],
-    "Archivo": dict_test_results_spec["Archivo"]
-}
 
+df_test_cnn_spec = pd.DataFrame([dict_test_results_spec])
 # Leer archivo existente o crear nuevo DataFrame
 if os.path.isfile(csv_test_spec):
     df_test_spec = pd.read_csv(csv_test_spec)
@@ -171,13 +149,13 @@ else:
     df_test_spec = pd.DataFrame()
 
 # Concatenar los nuevos resultados
-df_test_spec = pd.concat([df_test_spec, pd.DataFrame([CNN_test_results_spec])], ignore_index=True)
+df_test_spec = pd.concat([df_test_spec, df_test_cnn_spec], ignore_index=True)
 
 # Guardar el archivo actualizado
 df_test_spec.to_csv(csv_test_spec, index=False)
 
-
-
+log_results_to_wandb(df_test_cnn_spec, "espectrales", "evaluación_test")
+wandb.finish()
 
 
 

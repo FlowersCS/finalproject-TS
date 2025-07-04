@@ -12,6 +12,7 @@ from sklearn.metrics import roc_auc_score
 from sklearn.preprocessing import label_binarize
 import os
 import joblib
+from datetime import datetime
 
 from copy import deepcopy
 # TRADITIONAL MODELS UTILS
@@ -239,38 +240,6 @@ def train_and_test_deepmodel(model, X_train, y_train, X_test, y_test, model_name
         'Archivo': filename
     }
 
-def kfold(X, y, model_class, model_kwargs, epochs=10, batch_size=128, n_splits=7, device='cpu'):
-    skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=42)
-    f1_scores = []
-    bal_acc_scores = []
-    accuracy_scores = []
-    for fold, (train_idx, val_idx) in enumerate(skf.split(X, y)):
-        print(f"\nFold {fold+1}/{n_splits}")
-        model = model_class(**model_kwargs).to(device)
-        optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3, weight_decay=1e-4)
-        criterion = nn.CrossEntropyLoss()
-        train_ds = TensorDataset(torch.FloatTensor(X[train_idx]), torch.LongTensor(y[train_idx]))
-        val_ds = TensorDataset(torch.FloatTensor(X[val_idx]), torch.LongTensor(y[val_idx]))
-        train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True)
-        val_loader = DataLoader(val_ds, batch_size=batch_size*2)
-        for epoch in range(epochs):
-            train_one_epoch(model, train_loader, criterion, optimizer, device, epoch=epoch)
-        preds, labels = evaluate(model, val_loader, device)
-        f1 = f1_score(labels, preds, average='weighted')
-        bal_acc = balanced_accuracy_score(labels, preds)
-        acc = accuracy_score(labels, preds)
-        print(f"F1-score: {f1:.4f} | Balanced accuracy: {bal_acc:.4f} | Accuracy: {acc:.4f}")
-        wandb.log({f"fold{fold+1}_f1": f1, f"fold{fold+1}_bal_acc": bal_acc, f"fold{fold+1}_acc": acc})
-        f1_scores.append(f1)
-        bal_acc_scores.append(bal_acc)
-        accuracy_scores.append(acc)
-    print("\nResumen KFold:")
-    print(f"F1-score promedio: {np.mean(f1_scores):.4f}")
-    print(f"Balanced accuracy promedio: {np.mean(bal_acc_scores):.4f}")
-    print(f"Accuracy promedio: {np.mean(accuracy_scores):.4f}")
-    wandb.log({"kfold_f1_mean": np.mean(f1_scores), "kfold_bal_acc_mean": np.mean(bal_acc_scores), "kfold_acc_mean": np.mean(accuracy_scores)})
-    return f1_scores, bal_acc_scores, accuracy_scores
-
 def kfold_mlp(X, y, name_model ,model_class, model_kwargs, epochs=10, batch_size=128, n_splits=7, device='cpu'):
     skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=42)
     # Resultados a recolectar (formato consistente con modelos clásicos)
@@ -332,6 +301,16 @@ def kfold_mlp(X, y, name_model ,model_class, model_kwargs, epochs=10, batch_size
     
     return df_results
 
+def setup_wandb(project_name="Final-Project-TimeSeries-UTEC", model_type="traditional", name="name model"):
+    """Configuración inicial de wandb para cualquier tipo de modelo"""
+    wandb.init(
+        project=project_name,
+        config={
+            "model_type": model_type,
+            "model_name": name,
+            "timestamp": datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        }
+    )
 
 def log_results_to_wandb(results_df, dataset_type, evaluation_type):
     """
@@ -344,7 +323,7 @@ def log_results_to_wandb(results_df, dataset_type, evaluation_type):
     """
     required_columns = {
         'Modelo', 'F1-score', 'Balanced accuracy', 'Accuracy', 'ROC-AUC',
-        'Tiempo promedio (s)', 'Tiempo total (s)'
+        'Tiempo total (s)' #'Tiempo promedio (s)'
     }
     
     # Verificar columnas requeridas

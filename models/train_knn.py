@@ -10,13 +10,11 @@ from sklearn.exceptions import UndefinedMetricWarning
 warnings.filterwarnings("ignore", category=UndefinedMetricWarning)
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from models.utils import kfold_trad_models
-from src.models.classic_models import KNNModel#, SVMModel
-from models.utils import train_and_test_model
+from src.models.classic_models import KNNModel
+from models.utils import train_and_test_model, setup_wandb, log_results_to_wandb
 from copy import deepcopy
 import wandb
-wandb.init(project="Final-Project-TimeSeries-UTEC", name="KNN-temp-spec", config={
-    "n_splits": 7
-})
+setup_wandb(project_name="Final-Project-TimeSeries-UTEC", model_type="tradicional", name="KNN-temp-spec")
 
 project_root = os.path.dirname(os.getcwd())
 data_path = os.path.join(project_root,'finalprojectTS', 'data')
@@ -60,6 +58,9 @@ if os.path.isfile(csv_cv_spec):
     df_cv_spec_old = pd.read_csv(csv_cv_spec)
     kfold_spec = pd.concat([df_cv_spec_old, kfold_spec], ignore_index=True)
 kfold_spec.to_csv(csv_cv_spec, index=False)
+
+log_results_to_wandb(kfold_temp, "temporales", "validación_cruzada")
+log_results_to_wandb(kfold_spec, "espectrales", "validación_cruzada")
 
 #---------Traning-test-------------------
 test_results_temp = []
@@ -112,7 +113,10 @@ if os.path.isfile(csv_test_spec):
     df_test_spec = pd.concat([df_test_spec_old, df_test_spec], ignore_index=True)
 df_test_spec.to_csv(csv_test_spec, index=False)
 
+log_results_to_wandb(df_test_temp, "temporales", "evaluación_test")
+log_results_to_wandb(df_test_spec, "espectrales", "evaluación_test")
 
+'''
 #----------------WADBN----------------------------------
 
 # 1. Log de KFold (después de crossval_models)
@@ -180,5 +184,5 @@ wandb.log({
     "Resumen_Test_Espectrales": wandb.Table(dataframe=df_test_spec),
     #"Curva_ROC": wandb.plot.roc_curve(y_true, y_probs, labels=class_names)
 })
-
+'''
 wandb.finish()

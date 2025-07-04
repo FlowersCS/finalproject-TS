@@ -12,12 +12,11 @@ warnings.filterwarnings("ignore", category=UndefinedMetricWarning)
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from models.utils import kfold_trad_models
 from src.models.dl_models import LSTMModel
-from models.utils import kfold_lstm, train_and_test_lstm#,log_results_to_wandb
+from models.utils import kfold_lstm, train_and_test_lstm, setup_wandb, log_results_to_wandb
 from copy import deepcopy
-#import wandb
-#wandb.init(project="Final-Project-TimeSeries-UTEC", name="LSTM-temp-spec", config={
-#    "n_splits": 7
-#})
+import wandb
+setup_wandb(project_name="Final-Project-TimeSeries-UTEC", model_type="deep", name="LSTM-temp-spec")
+
 
 project_root = os.path.dirname(os.getcwd())
 data_path = os.path.join(project_root,'finalprojectTS', 'data')
@@ -47,7 +46,7 @@ df_kfold_temp = kfold_lstm(X_temp_train.values, y_temp_train.values,
                          {'input_size': X_temp_train.shape[1], 'num_classes': len(np.unique(y_temp_train))},
                          epochs=epochs, device='cuda' if torch.cuda.is_available() else 'cpu')
 
-df_kfold_spec = kfold_lstm(X_spec_train.values, y_temp_train.values, 
+df_kfold_spec = kfold_lstm(X_spec_train.values, y_spec_train.values, 
                          "LSTM",LSTMModel, 
                          {'input_size': X_spec_train.shape[1], 'num_classes': len(np.unique(y_spec_train))},
                          epochs=epochs, device='cuda' if torch.cuda.is_available() else 'cpu')
@@ -67,6 +66,8 @@ if os.path.isfile(csv_cv_spec):
     df_spec_kfold = pd.concat([df_cv_spec_old, df_kfold_spec], ignore_index=True)
 df_spec_kfold.to_csv(csv_cv_spec, index=False)
 
+log_results_to_wandb(df_kfold_temp, "temporales", "validación_cruzada")
+log_results_to_wandb(df_kfold_spec, "espectrales", "validación_cruzada")
 
 #---------------Training-test-------------------
 dict_test_results_temp = train_and_test_lstm(
@@ -98,20 +99,9 @@ print(dict_test_results_spec)
 
 
 csv_test_temp = os.path.join(save_results_path, "resultados_test_temporales.csv")
+csv_test_spec = os.path.join(save_results_path, "resultados_test_espectrales.csv")
 
-# Crear DataFrame con los resultados del LSTM
-LSTM_test_results_temp = {
-    "Modelo": "LSTM",
-    "F1-score": dict_test_results_temp["F1-score"],
-    "Balanced accuracy": dict_test_results_temp["Balanced accuracy"],
-    "Accuracy": dict_test_results_temp["Accuracy"],
-    "ROC-AUC": dict_test_results_temp["ROC-AUC"],
-    "Tiempo entrenamiento (s)": dict_test_results_temp["Tiempo entrenamiento (s)"],
-    "Tiempo predicción (s)": dict_test_results_temp["Tiempo predicción (s)"],
-    "Tiempo total (s)": dict_test_results_temp["Tiempo total (s)"],
-    "Archivo": dict_test_results_temp["Archivo"]
-}
-
+df_test_lstm_temp = pd.DataFrame([dict_test_results_temp])
 # Leer archivo existente o crear nuevo DataFrame
 if os.path.isfile(csv_test_temp):
     df_test_temp = pd.read_csv(csv_test_temp)
@@ -121,25 +111,16 @@ else:
     df_test_temp = pd.DataFrame()
 
 # Concatenar los nuevos resultados
-df_test_temp = pd.concat([df_test_temp, pd.DataFrame([LSTM_test_results_temp])], ignore_index=True)
+df_test_temp = pd.concat([df_test_temp, df_test_lstm_temp], ignore_index=True)
 
 # Guardar el archivo actualizado
 df_test_temp.to_csv(csv_test_temp, index=False)
 
-csv_test_spec = os.path.join(save_results_path, "resultados_test_espectrales.csv")
-# Crear DataFrame con los resultados del LSTM
-LSTM_test_results_spec = {
-    "Modelo": "LSTM",
-    "F1-score": dict_test_results_spec["F1-score"],
-    "Balanced accuracy": dict_test_results_spec["Balanced accuracy"],
-    "Accuracy": dict_test_results_spec["Accuracy"],
-    "ROC-AUC": dict_test_results_spec["ROC-AUC"],
-    "Tiempo entrenamiento (s)": dict_test_results_spec["Tiempo entrenamiento (s)"],
-    "Tiempo predicción (s)": dict_test_results_spec["Tiempo predicción (s)"],
-    "Tiempo total (s)": dict_test_results_spec["Tiempo total (s)"],
-    "Archivo": dict_test_results_spec["Archivo"]
-}
+log_results_to_wandb(df_test_lstm_temp, "temporales", "evaluación_test")
 
+
+
+df_test_lstm_spec = pd.DataFrame([dict_test_results_spec])
 # Leer archivo existente o crear nuevo DataFrame
 if os.path.isfile(csv_test_spec):
     df_test_spec = pd.read_csv(csv_test_spec)
@@ -149,14 +130,15 @@ else:
     df_test_spec = pd.DataFrame()
 
 # Concatenar los nuevos resultados
-df_test_spec = pd.concat([df_test_spec, pd.DataFrame([LSTM_test_results_spec])], ignore_index=True)
+df_test_spec = pd.concat([df_test_spec, df_test_lstm_spec], ignore_index=True)
 
 # Guardar el archivo actualizado
 df_test_spec.to_csv(csv_test_spec, index=False)
 
+log_results_to_wandb(df_test_lstm_spec, "espectrales", "evaluación_test")
 
 
-
+wandb.finish()
 
 
 

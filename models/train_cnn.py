@@ -1,29 +1,189 @@
+from sklearn.model_selection import train_test_split, cross_val_score, KFold, cross_validate
+from sklearn.metrics import accuracy_score, f1_score, balanced_accuracy_score #classification_report
 import sys
 import os
+import joblib
 import pandas as pd
 import numpy as np
-from sklearn.model_selection import train_test_split
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from src.models.dl_models import CNNModel
-from sklearn.metrics import f1_score, balanced_accuracy_score,accuracy_score
-from models.utils import train_one_epoch, evaluate, kfold
-
 import torch
-from torch.utils.data import DataLoader, TensorDataset
-import torch.nn as nn
+import warnings
+from sklearn.exceptions import UndefinedMetricWarning
+warnings.filterwarnings("ignore", category=UndefinedMetricWarning)
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from models.utils import kfold_trad_models
+from src.models.dl_models import CNNModel
+from models.utils import kfold_cnn, train_and_test_cnn#,log_results_to_wandb
+from copy import deepcopy
+#import wandb
+#wandb.init(project="Final-Project-TimeSeries-UTEC", name="CNN-temp-spec", config={
+#    "n_splits": 7
+#})
 
-import wandb
-# init wandb
+project_root = os.path.dirname(os.getcwd())
+data_path = os.path.join(project_root,'finalprojectTS', 'data')
+processed_path = data_path + '/processed'
+
+save_models_path = os.path.join(project_root, 'finalprojectTS','models', 'save_models')
+save_results_path = os.path.join(project_root, 'finalprojectTS','models', 'results')
+
+features_temporal = pd.read_csv(processed_path + '/features_temporales_labelNum_overlap50.csv')
+features_espectrales = pd.read_csv(processed_path + '/features_espectrales_labelNum_overlap50.csv')
+
+X_temp = features_temporal.iloc[:, 1:-1] 
+y_temp = features_temporal.iloc[:, -1]  
+X_spec = features_espectrales.iloc[:, 1:-1] 
+y_spec = features_espectrales.iloc[:, -1]  
+
+# Dividir el dataset en entrenamiento y prueba
+X_temp_train, X_temp_test, y_temp_train, y_temp_test = train_test_split(X_temp, y_temp, test_size=0.2, random_state=42)
+X_spec_train, X_spec_test, y_spec_train, y_spec_test = train_test_split(X_spec, y_spec, test_size=0.2, random_state=42)
+
 epochs = 10
-batch_size = 128
+n_splits = 7
 
-wandb.init(project="Final-Project-TimeSeries-UTEC", name="CNN-temp-spec", config={
-    "epochs": epochs,
-    "batch_size": batch_size,
-    "model": "CNN",
-})
+cnn_kwargs_temp = {
+    'input_channels': 1,
+    'num_classes': 6,
+    'input_features': X_temp_train.shape[1]
+}
+cnn_kwargs_spec = {
+    'input_channels': 1,
+    'num_classes': 6,
+    'input_features': X_spec_train.shape[1]
+}
+#----------KFOLD-------------------
+df_kfold_temp = kfold_cnn(
+    X=X_temp_train.values,
+    y=y_temp_train.values,
+    name_model="CNN",
+    model_class=CNNModel,
+    model_kwargs=cnn_kwargs_temp,
+    epochs=10,
+    device='cuda' if torch.cuda.is_available() else 'cpu'
+)
+
+df_kfold_spec = kfold_cnn(
+    X=X_spec_train.values,
+    y=y_spec_train.values,
+    name_model="CNN",
+    model_class=CNNModel,
+    model_kwargs=cnn_kwargs_spec,
+    epochs=10,
+    device='cuda' if torch.cuda.is_available() else 'cpu'
+)
+
+print(df_kfold_temp)
+print(df_kfold_spec)
+
+csv_cv_temp = os.path.join(save_results_path, 'resultados_cv_temporales.csv')
+if os.path.isfile(csv_cv_temp):
+    df_cv_temp_old = pd.read_csv(csv_cv_temp)
+    df_temp_kfold = pd.concat([df_cv_temp_old, df_kfold_temp], ignore_index=True)
+df_temp_kfold.to_csv(csv_cv_temp, index=False)
+
+csv_cv_spec = os.path.join(save_results_path, 'resultados_cv_espectrales.csv')
+if os.path.isfile(csv_cv_spec):
+    df_cv_spec_old = pd.read_csv(csv_cv_spec)
+    df_spec_kfold = pd.concat([df_cv_spec_old, df_kfold_spec], ignore_index=True)
+df_spec_kfold.to_csv(csv_cv_spec, index=False)
 
 
+#---------------Training-test-------------------
+
+
+dict_test_results_temp = train_and_test_cnn(
+    model=CNNModel(**cnn_kwargs_temp),
+    X_train=X_temp_train,
+    y_train=y_temp_train,
+    X_test=X_temp_test,
+    y_test=y_temp_test,
+    model_name="CNN",
+    dataset_name="temporales",
+    save_path=save_models_path,
+    epochs=epochs
+)
+
+dict_test_results_spec = train_and_test_cnn(
+    model=CNNModel(**cnn_kwargs_spec),
+    X_train=X_spec_train,
+    y_train=y_spec_train,
+    X_test=X_spec_test,
+    y_test=y_spec_test,
+    model_name="CNN",
+    dataset_name="espectrales",
+    save_path=save_models_path,
+    epochs=epochs
+)
+
+print(dict_test_results_temp)
+print(dict_test_results_spec)
+
+
+csv_test_temp = os.path.join(save_results_path, "resultados_test_temporales.csv")
+
+# Crear DataFrame con los resultados del CNN
+CNN_test_results_temp = {
+    "Modelo": "CNN",
+    "F1-score": dict_test_results_temp["F1-score"],
+    "Balanced accuracy": dict_test_results_temp["Balanced accuracy"],
+    "Accuracy": dict_test_results_temp["Accuracy"],
+    "ROC-AUC": dict_test_results_temp["ROC-AUC"],
+    "Tiempo entrenamiento (s)": dict_test_results_temp["Tiempo entrenamiento (s)"],
+    "Tiempo predicción (s)": dict_test_results_temp["Tiempo predicción (s)"],
+    "Tiempo total (s)": dict_test_results_temp["Tiempo total (s)"],
+    "Archivo": dict_test_results_temp["Archivo"]
+}
+
+# Leer archivo existente o crear nuevo DataFrame
+if os.path.isfile(csv_test_temp):
+    df_test_temp = pd.read_csv(csv_test_temp)
+    # Eliminar entrada previa de CNN si existe (para evitar duplicados)
+    df_test_temp = df_test_temp[df_test_temp['Modelo'] != 'CNN']
+else:
+    df_test_temp = pd.DataFrame()
+
+# Concatenar los nuevos resultados
+df_test_temp = pd.concat([df_test_temp, pd.DataFrame([CNN_test_results_temp])], ignore_index=True)
+
+# Guardar el archivo actualizado
+df_test_temp.to_csv(csv_test_temp, index=False)
+
+csv_test_spec = os.path.join(save_results_path, "resultados_test_espectrales.csv")
+# Crear DataFrame con los resultados del CNN
+CNN_test_results_spec = {
+    "Modelo": "CNN",
+    "F1-score": dict_test_results_spec["F1-score"],
+    "Balanced accuracy": dict_test_results_spec["Balanced accuracy"],
+    "Accuracy": dict_test_results_spec["Accuracy"],
+    "ROC-AUC": dict_test_results_spec["ROC-AUC"],
+    "Tiempo entrenamiento (s)": dict_test_results_spec["Tiempo entrenamiento (s)"],
+    "Tiempo predicción (s)": dict_test_results_spec["Tiempo predicción (s)"],
+    "Tiempo total (s)": dict_test_results_spec["Tiempo total (s)"],
+    "Archivo": dict_test_results_spec["Archivo"]
+}
+
+# Leer archivo existente o crear nuevo DataFrame
+if os.path.isfile(csv_test_spec):
+    df_test_spec = pd.read_csv(csv_test_spec)
+    # Eliminar entrada previa de CNN si existe (para evitar duplicados)
+    df_test_spec = df_test_spec[df_test_spec['Modelo'] != 'CNN']
+else:
+    df_test_spec = pd.DataFrame()
+
+# Concatenar los nuevos resultados
+df_test_spec = pd.concat([df_test_spec, pd.DataFrame([CNN_test_results_spec])], ignore_index=True)
+
+# Guardar el archivo actualizado
+df_test_spec.to_csv(csv_test_spec, index=False)
+
+
+
+
+
+
+
+
+'''
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 project_root = os.path.dirname(os.getcwd())
@@ -192,3 +352,4 @@ df_test_spec = pd.concat([df_test_spec, pd.DataFrame([{
 df_test_spec.to_csv(csv_test_spec, index=False)
 
 wandb.finish()
+'''

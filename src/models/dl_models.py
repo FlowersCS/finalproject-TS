@@ -41,6 +41,12 @@ class MLPModel(nn.Module):
         
         return self.output(x)
     
+    def predict_proba(self, x):
+        """Método para compatibilidad con sklearn-style"""
+        with torch.no_grad():
+            logits = self.forward(x)
+            return F.softmax(logits, dim=1).cpu().numpy()
+    
     def _initialize_weights(self):
         for m in self.modules():
             if isinstance(m, nn.Linear):

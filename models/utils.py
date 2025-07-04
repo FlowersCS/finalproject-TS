@@ -307,9 +307,9 @@ def setup_wandb(project_name="Final-Project-TimeSeries-UTEC", model_type="tradit
         project=project_name,
         config={
             "model_type": model_type,
-            "model_name": name,
             "timestamp": datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        }
+        },
+        name = name
     )
 
 def log_results_to_wandb(results_df, dataset_type, evaluation_type):

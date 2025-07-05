@@ -18,12 +18,13 @@ from copy import deepcopy
 # TRADITIONAL MODELS UTILS
 
 def kfold_trad_models(models, X, y, n_splits=7):
+
     results = []
     classes = sorted(y.unique())
     y_bin = label_binarize(y, classes=classes)
     
     for model_name, model in models:
-        kf = KFold(n_splits=n_splits, shuffle=True, random_state=42)
+        skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=42)
         
         # Métricas a recolectar
         f1_scores = []
@@ -32,7 +33,7 @@ def kfold_trad_models(models, X, y, n_splits=7):
         roc_auc_scores = []
         fold_times = []
         
-        for train_index, test_index in kf.split(X):
+        for train_index, test_index in skf.split(X, y):
             X_train, X_test = X.iloc[train_index], X.iloc[test_index]
             y_train, y_test = y.iloc[train_index], y.iloc[test_index]
             y_test_bin = label_binarize(y_test, classes=classes)

@@ -33,8 +33,8 @@ X_spec = features_espectrales.iloc[:, 1:-1]
 y_spec = features_espectrales.iloc[:, -1]  
 
 # Dividir el dataset en entrenamiento y prueba
-X_temp_train, X_temp_test, y_temp_train, y_temp_test = train_test_split(X_temp, y_temp, test_size=0.2, random_state=42)
-X_spec_train, X_spec_test, y_spec_train, y_spec_test = train_test_split(X_spec, y_spec, test_size=0.2, random_state=42)
+X_temp_train, X_temp_test, y_temp_train, y_temp_test = train_test_split(X_temp, y_temp,stratify=y_temp, test_size=0.2, random_state=42)
+X_spec_train, X_spec_test, y_spec_train, y_spec_test = train_test_split(X_spec, y_spec, stratify=y_spec, test_size=0.2, random_state=42)
 
 epochs = 10
 n_splits = 7
